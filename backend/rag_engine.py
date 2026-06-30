@@ -73,20 +73,13 @@ class RAGEngine:
         return " ".join(lines)
 
     def _split(self, text: str) -> list[str]:
-        """Sentence-aware chunker."""
+        """Character-based chunker — works even without punctuation."""
         text = re.sub(r"\s+", " ", text).strip()
-        sentences = re.split(r'(?<=[.!?])\s+', text)
-        chunks, current = [], ""
-        for sentence in sentences:
-            if len(current) + len(sentence) <= CHUNK_SIZE:
-                current += " " + sentence
-            else:
-                if current:
-                    chunks.append(current.strip())
-                overlap_start = max(0, len(current) - CHUNK_OVERLAP)
-                current = current[overlap_start:] + " " + sentence
-        if current:
-            chunks.append(current.strip())
+        chunks, start = [], 0
+        while start < len(text):
+            end = min(start + CHUNK_SIZE, len(text))
+            chunks.append(text[start:end])
+            start += CHUNK_SIZE - CHUNK_OVERLAP
         return chunks
 
     def _build_index(self):
