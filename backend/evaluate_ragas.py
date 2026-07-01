@@ -130,24 +130,36 @@ def evaluate_ragas(url: str):
     llm        = LangchainLLMWrapper(ChatGroq(model=GROQ_MODEL, api_key=GROQ_API_KEY, temperature=0))
     embeddings = LangchainEmbeddingsWrapper(OllamaEmbeddings(model=OLLAMA_MODEL))
 
-    result = evaluate(
-        dataset,
-        metrics=[
-            faithfulness,
-            answer_relevancy,
-            context_utilization,
-            context_recall,
-        ],
-        llm=llm,
-        embeddings=embeddings,
-        raise_exceptions=False,
-    )
+    print("\nRunning RAGAS evaluation with Groq (one metric at a time)...\n")
 
-    print(f"\n{'='*60}")
-    print("RAGAS RESULTS")
-    print(f"{'='*60}")
+    all_scores = {}
+    all_dfs = []
 
-    scores = result.to_pandas()
+    for metric in [faithfulness, answer_relevancy, context_utilization, context_recall]:
+        print(f"  Evaluating {metric.name}...")
+        try:
+            r = evaluate(
+                dataset,
+                metrics=[metric],
+                llm=llm,
+                embeddings=embeddings,
+                raise_exceptions=False,
+            )
+            df = r.to_pandas()
+            all_dfs.append(df)
+            col = metric.name
+            if col in df.columns:
+                val = df[col].mean()
+                if not is_nan(val):
+                    all_scores[col] = round(float(val), 3)
+                    print(f"  {col}: {all_scores[col]}")
+                else:
+                    print(f"  {col}: N/A")
+        except Exception as e:
+            print(f" {metric.name} failed: {e}")
+
+    import pandas as pd
+    scores = pd.concat(all_dfs, axis=1) if all_dfs else pd.DataFrame()
 
     metrics = {
         "faithfulness":        "Is the answer grounded in the retrieved context?",
