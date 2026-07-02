@@ -1,5 +1,5 @@
 """
-rag_engine.py — Core RAG logic for VidMind
+rag_engine.py  —  Core RAG logic for VidMind
 YouTube transcript → chunks → embeddings → FAISS index
 Query + history → top-k chunks → Ollama → streaming answer
 """
@@ -18,7 +18,7 @@ OLLAMA_MODEL  = "llama3.2"
 EMBED_MODEL   = "all-MiniLM-L6-v2"
 CHUNK_SIZE    = 1000
 CHUNK_OVERLAP = 200
-TOP_K         = 8
+TOP_K         = 6
 
 
 class RAGEngine:
@@ -52,28 +52,16 @@ class RAGEngine:
         yield from self._generate_stream(question, context, history)
 
     # ── Internals ─────────────────────────────────────────────────
-    # def _fetch_transcript(self, video_id: str) -> str:
-    #     """Fetch transcript from YouTube and join into plain text with timestamps."""
-    #     ytt = YouTubeTranscriptApi()
-    #     transcript = ytt.fetch(video_id)
-    #     lines = []
-    #     for entry in transcript:
-    #         mins = int(entry.start) // 60
-    #         secs = int(entry.start) % 60
-    #         lines.append(f"[{mins}:{secs:02d}] {entry.text}")
-        # return " ".join(lines)
-
     def _fetch_transcript(self, video_id: str) -> str:
         ytt = YouTubeTranscriptApi()
         transcript = ytt.fetch(video_id)
         lines = []
         for entry in transcript:
-            # Clean text only — no timestamps polluting the embeddings
             lines.append(entry.text.strip())
         return " ".join(lines)
 
     def _split(self, text: str) -> list[str]:
-        """Character-based chunker — works even without punctuation."""
+        """Character-based chunker."""
         text = re.sub(r"\s+", " ", text).strip()
         chunks, start = [], 0
         while start < len(text):
@@ -106,8 +94,6 @@ class RAGEngine:
         return "\n\n---\n\n".join(retrieved)
 
     def _summarise(self) -> str:
-        """Generate a structured summary of the whole video."""
-        # Use first 2000 chars as overview snippet
         snippet = " ".join(self.chunks[:5])[:2000]
         payload = {
             "model": OLLAMA_MODEL,
@@ -145,22 +131,21 @@ SUMMARY:""",
         history_section = f"CONVERSATION HISTORY:\n{history_text}\n\n" if history_text else ""
         summary_section = f"VIDEO OVERVIEW:\n{self.doc_summary}\n\n" if self.doc_summary else ""
 
-        prompt = f"""You are an expert assistant helping a user deeply understand a YouTube video.
+        prompt = f"""You are a smart assistant helping a user understand a YouTube video they loaded.
 
 RULES:
-- Give SPECIFIC answers using exact details, terms, and explanations from the transcript
-- NEVER give generic answers — always ground your response in what was actually said
-- If the video explains a concept step by step, reproduce those exact steps
-- If the user asks about an algorithm, process, or technique — explain it exactly as the video does
-- Use the CONVERSATION HISTORY for follow-up questions
-- Reference approximate timestamps when you can e.g. "Around the middle of the video..."
-- If the answer isn't in the transcript, say so clearly
+- Answer based only on the VIDEO CONTEXT below
+- Follow the user's instruction exactly
+- Use CONVERSATION HISTORY to understand follow-up questions
+- Be concise, clear, and friendly
+- If something isn't in the video, say so honestly
+- Reference approximate timestamps when helpful
 
-{summary_section}{history_section}TRANSCRIPT CONTEXT:
+{summary_section}{history_section}VIDEO CONTEXT (most relevant sections):
 {context}
 
 User: {question}
-Assistant: Based on the video,"""
+Assistant:"""
 
         payload = {
             "model": OLLAMA_MODEL,
@@ -189,6 +174,6 @@ Assistant: Based on the video,"""
                         if chunk.get("done", False):
                             break
         except requests.exceptions.ConnectionError:
-            yield "Could not connect to Ollama. Make sure it is running."
+            yield " Could not connect to Ollama. Make sure it is running."
         except Exception as e:
             yield f"Error: {e}"

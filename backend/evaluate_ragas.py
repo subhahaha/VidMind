@@ -105,7 +105,7 @@ def evaluate_ragas(url: str):
     rag = RAGEngine()
     video_id = extract_video_id(url)
     num_chunks = rag.load_video(video_id)
-    print(f"✅ Video loaded — {num_chunks} chunks indexed\n")
+    print(f" Video loaded — {num_chunks} chunks indexed\n")
 
     print("Generating answers (using local Ollama)...")
     questions, answers, contexts, references = [], [], [], []
@@ -189,16 +189,16 @@ def evaluate_ragas(url: str):
 
     if valid_scores:
         overall = round(sum(valid_scores) / len(valid_scores), 3)
-        if overall >= 0.8:   grade = "Excellent ✅"
-        elif overall >= 0.6: grade = "Good 👍"
-        elif overall >= 0.4: grade = "Average ⚠️"
-        else:                grade = "Needs improvement ❌"
+        if overall >= 0.8:   grade = "Excellent "
+        elif overall >= 0.6: grade = "Good "
+        elif overall >= 0.4: grade = "Average "
+        else:                grade = "Needs improvement "
         print(f"OVERALL RAGAS SCORE: {overall} / 1.0")
         print(f"GRADE: {grade}")
     else:
         overall = None
         grade   = "Could not evaluate"
-        print("⚠️  No metrics computed.")
+        print(" No metrics computed.")
 
     print(f"{'='*60}\n")
 
@@ -237,7 +237,7 @@ def evaluate_ragas(url: str):
         print("Results saved to eval_ragas_results.json")
 
     except Exception as e:
-        print(f"⚠️  Could not save JSON: {e}")
+        print(f"  Could not save JSON: {e}")
 
 
 if __name__ == "__main__":
