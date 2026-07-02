@@ -4,7 +4,7 @@ const API = "http://localhost:8000"
 
 export default function ChatBox() {
   const [messages, setMessages] = useState([
-    { role: "assistant", content: "Hi! I've loaded the video. Ask me anything about it — or try 'summarise the key points' or 'what was discussed at the start?'" }
+    { role: "assistant", content: "Hi! I've loaded the video. Ask me anything about it." }
   ])
   const [input, setInput]     = useState("")
   const [thinking, setThinking] = useState(false)
@@ -56,7 +56,7 @@ export default function ChatBox() {
         const updated = [...prev]
         updated[updated.length - 1] = {
           role: "assistant",
-          content: "❌ Error connecting to backend."
+          content: " Error connecting to backend."
         }
         return updated
       })
@@ -87,7 +87,7 @@ export default function ChatBox() {
         {thinking && (
           <div className="message assistant">
             <span className="message-role">VidMind</span>
-            <p className="message-content thinking">Thinking…</p>
+            <p className="message-content thinking">…</p>
           </div>
         )}
         <div ref={bottomRef} />
